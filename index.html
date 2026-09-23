@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e3a5f">
+<title>名刺ベース</title>
+<style>
+  :root{
+    --navy:#1e3a5f; --navy-d:#152b47; --accent:#2f80ed; --accent-l:#e7f0fd;
+    --bg:#f4f6f9; --card:#ffffff; --line:#e3e8ef; --ink:#1f2733; --sub:#66738a;
+    --ok:#1f9d55; --warn:#e07b00; --danger:#d93838; --danger-l:#fdeaea;
+    --shadow:0 1px 3px rgba(16,30,54,.08),0 4px 16px rgba(16,30,54,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:16px; line-height:1.6;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  header.app{
+    background:var(--navy); color:#fff; padding:14px 16px;
+    padding-top:calc(14px + env(safe-area-inset-top));
+    display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:50;
+  }
+  header.app .logo{font-weight:700; font-size:18px; letter-spacing:.02em}
+  header.app .logo small{display:block; font-weight:400; font-size:11px; opacity:.8; letter-spacing:.15em}
+  header.app .spacer{flex:1}
+  header.app .mode{font-size:11px; background:rgba(255,255,255,.15); padding:4px 9px; border-radius:20px}
+  header.app .mode.cloud{background:var(--accent)}
+  .wrap{max-width:760px; margin:0 auto; padding:14px}
+
+  /* nav */
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; z-index:50; padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav.tabs button{
+    flex:1; border:none; background:none; padding:9px 4px 8px; font-size:11px; color:var(--sub);
+    display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;
+  }
+  nav.tabs button .ic{font-size:21px; line-height:1}
+  nav.tabs button.active{color:var(--accent); font-weight:600}
+
+  /* search */
+  .searchbar{display:flex; gap:8px; margin-bottom:10px}
+  .searchbar input{
+    flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:12px; font-size:16px; background:#fff;
+  }
+  .segment{display:flex; background:#eef1f6; border-radius:11px; padding:3px; margin-bottom:10px; gap:3px}
+  .segment button{
+    flex:1; border:none; background:none; padding:8px 4px; border-radius:9px; font-size:13px; color:var(--sub); cursor:pointer; font-weight:600;
+  }
+  .segment button.active{background:#fff; color:var(--navy); box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .tagfilter{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .tagfilter .chip{
+    font-size:12px; padding:5px 11px; border-radius:20px; border:1px solid var(--line); background:#fff; color:var(--sub); cursor:pointer;
+  }
+  .tagfilter .chip.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+
+  /* card list */
+  .card{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px;
+    margin-bottom:10px; display:flex; gap:12px; align-items:flex-start; cursor:pointer; position:relative;
+    border:1px solid transparent;
+  }
+  .card:active{border-color:var(--accent)}
+  .avatar{
+    width:46px; height:46px; border-radius:11px; flex-shrink:0; background:var(--accent-l); color:var(--accent);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; overflow:hidden;
+  }
+  .avatar img{width:100%; height:100%; object-fit:cover}
+  .card .body{flex:1; min-width:0}
+  .card .nm{font-weight:700; font-size:16px}
+  .card .co{font-size:13px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .card .meta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+  .badge{font-size:11px; padding:2px 8px; border-radius:20px; background:#eef1f6; color:var(--sub)}
+  .badge.tag{background:var(--accent-l); color:var(--accent)}
+  .badge.shared{background:#e9f7ef; color:var(--ok)}
+  .badge.follow{background:#fff3e0; color:var(--warn)}
+  .card .who{position:absolute; top:10px; right:12px; font-size:10px; color:var(--sub)}
+
+  .empty{text-align:center; color:var(--sub); padding:50px 20px}
+  .empty .big{font-size:44px; margin-bottom:10px}
+
+  /* buttons */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; cursor:pointer;
+    padding:12px 16px; border-radius:12px; font-size:15px; font-weight:600; background:var(--accent); color:#fff;
+  }
+  .btn.block{width:100%}
+  .btn.ghost{background:#eef1f6; color:var(--navy)}
+  .btn.line{background:#fff; border:1px solid var(--line); color:var(--navy)}
+  .btn.danger{background:var(--danger-l); color:var(--danger)}
+  .btn.sm{padding:8px 12px; font-size:13px; border-radius:10px}
+  .fab{
+    position:fixed; right:16px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:45;
+    width:56px; height:56px; border-radius:50%; background:var(--accent); color:#fff; border:none;
+    font-size:28px; box-shadow:0 6px 18px rgba(47,128,237,.4); cursor:pointer;
+  }
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(16,24,40,.5); z-index:100; display:none;
+    align-items:flex-end; justify-content:center;
+  }
+  .overlay.show{display:flex}
+  .sheet{
+    background:#fff; width:100%; max-width:760px; max-height:92vh; overflow-y:auto;
+    border-radius:20px 20px 0 0; padding:18px 16px calc(24px + env(safe-area-inset-bottom));
+    animation:up .22s ease;
+  }
+  @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+  .sheet h2{margin:2px 0 14px; font-size:19px; display:flex; align-items:center; gap:8px}
+  .sheet .close{margin-left:auto; background:#eef1f6; border:none; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer; color:var(--sub)}
+
+  label.f{display:block; margin-bottom:12px}
+  label.f .lb{font-size:12px; color:var(--sub); font-weight:600; margin-bottom:4px; display:block}
+  label.f input, label.f textarea, label.f select{
+    width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:10px; font-size:16px; background:#fff; font-family:inherit;
+  }
+  label.f textarea{min-height:66px; resize:vertical}
+  .row2{display:flex; gap:10px}
+  .row2>*{flex:1}
+
+  /* detail */
+  .detail-hd{display:flex; gap:14px; align-items:center; margin-bottom:14px}
+  .detail-hd .avatar{width:64px; height:64px; font-size:24px}
+  .detail-hd .nm{font-size:21px; font-weight:700}
+  .detail-hd .kana{font-size:12px; color:var(--sub)}
+  .detail-hd .co{font-size:14px; color:var(--sub); margin-top:2px}
+  .drow{display:flex; align-items:center; gap:12px; padding:11px 2px; border-top:1px solid var(--line)}
+  .drow .k{font-size:12px; color:var(--sub); width:52px; flex-shrink:0}
+  .drow .v{flex:1; word-break:break-all}
+  .drow a{color:var(--accent); text-decoration:none; font-weight:600}
+  .actgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:14px 0}
+  .actgrid a, .actgrid button{
+    text-decoration:none; background:#eef1f6; border:none; border-radius:12px; padding:11px 4px; text-align:center;
+    color:var(--navy); font-size:11px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .actgrid .ic{font-size:20px}
+
+  /* photo capture */
+  .photobox{
+    border:2px dashed var(--line); border-radius:12px; padding:18px; text-align:center; color:var(--sub);
+    margin-bottom:12px; background:#fafbfd;
+  }
+  .photobox img{max-width:100%; max-height:180px; border-radius:8px; margin-top:8px}
+  .ocr-status{font-size:13px; padding:9px 12px; border-radius:10px; margin-bottom:12px; display:none}
+  .ocr-status.show{display:block}
+  .ocr-status.load{background:var(--accent-l); color:var(--accent)}
+  .ocr-status.err{background:var(--danger-l); color:var(--danger)}
+
+  .hint{font-size:12px; color:var(--sub); margin:8px 0}
+  .divider{height:1px; background:var(--line); margin:16px 0}
+  .sec-title{font-size:13px; font-weight:700; color:var(--sub); margin:18px 0 8px; letter-spacing:.03em}
+  #qrbox{display:flex; justify-content:center; padding:16px; background:#fff; border-radius:12px; border:1px solid var(--line)}
+  .toast{
+    position:fixed; bottom:calc(90px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    background:var(--navy-d); color:#fff; padding:10px 18px; border-radius:24px; font-size:14px; z-index:200;
+    opacity:0; transition:opacity .2s; pointer-events:none; box-shadow:var(--shadow); max-width:90%;
+  }
+  .toast.show{opacity:1}
+  .count{font-size:13px; color:var(--sub); margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="logo">名刺ベース<small>MEISHI BASE</small></div>
+  <div class="spacer"></div>
+  <span class="mode" id="modeBadge">ローカル</span>
+</header>
+
+<main class="wrap">
+  <!-- ===== 一覧 ===== -->
+  <section id="view-list">
+    <div class="searchbar">
+      <input id="q" type="search" placeholder="🔍 名前・会社・メモで検索" oninput="render()">
+    </div>
+    <div class="segment" id="scopeSeg">
+      <button data-scope="all" class="active" onclick="setScope('all')">すべて</button>
+      <button data-scope="mine" onclick="setScope('mine')">自分の名刺</button>
+      <button data-scope="shared" onclick="setScope('shared')">共有</button>
+    </div>
+    <div class="tagfilter" id="tagFilter"></div>
+    <div class="count" id="count"></div>
+    <div id="list"></div>
+  </section>
+
+  <!-- ===== フォローアップ ===== -->
+  <section id="view-follow" style="display:none">
+    <h2 style="font-size:18px;margin:4px 0 12px">✅ フォローアップ</h2>
+    <p class="hint">「あとで連絡する」にした名刺の一覧です。連絡が済んだら完了にします。</p>
+    <div id="followList"></div>
+  </section>
+
+  <!-- ===== 設定 ===== -->
+  <section id="view-settings" style="display:none">
+    <h2 style="font-size:18px;margin:4px 0 12px">⚙️ 設定</h2>
+
+    <div class="sec-title">保存モード</div>
+    <div class="card" style="display:block;cursor:default">
+      <div class="segment" style="margin:0">
+        <button id="mode-local" class="active" onclick="setMode('local')">ローカル保存</button>
+        <button id="mode-cloud" onclick="setMode('cloud')">クラウド共有</button>
+      </div>
+      <p class="hint" id="modeHint">この端末の中だけに保存します。共有はできませんが、すぐ使えます。</p>
+    </div>
+
+    <div id="cloudSettings" style="display:none">
+      <div class="sec-title">Supabase接続</div>
+      <div class="card" style="display:block;cursor:default">
+        <label class="f"><span class="lb">Supabase URL</span><input id="sbUrl" placeholder="https://xxxx.supabase.co"></label>
+        <label class="f"><span class="lb">anon key（公開キー）</span><input id="sbKey" placeholder="eyJhbG..."></label>
+        <button class="btn block" onclick="saveSupabase()">接続を保存</button>
+      </div>
+
+      <div class="sec-title">ログイン</div>
+      <div class="card" style="display:block;cursor:default" id="authCard">
+        <div id="authedBox" style="display:none">
+          <p style="margin:2px 0">✅ ログイン中：<b id="authEmail"></b></p>
+          <label class="f"><span class="lb">共有名（他の人に見える名前）</span><input id="displayName" placeholder="例：田中（営業部）"></label>
+          <button class="btn line block" onclick="saveDisplayName()">共有名を保存</button>
+          <div style="height:8px"></div>
+          <button class="btn ghost block" onclick="doLogout()">ログアウト</button>
+        </div>
+        <div id="loginBox">
+          <label class="f"><span class="lb">メールアドレス</span><input id="authMail" type="email" placeholder="you@example.com"></label>
+          <label class="f"><span class="lb">パスワード</span><input id="authPass" type="password" placeholder="6文字以上"></label>
+          <div class="row2">
+            <button class="btn ghost" onclick="doAuth('login')">ログイン</button>
+            <button class="btn" onclick="doAuth('signup')">新規登録</button>
+          </div>
+          <p class="hint">同じSupabase・同じアカウント同士で名刺を共有できます。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title">写真よみとり（AI自動入力）</div>
+    <div class="card" style="display:block;cursor:default">
+      <label class="f"><span class="lb">Gemini APIキー</span><input id="ocrKey" placeholder="AIza..."></label>
+      <button class="btn line block" onclick="saveOcrKey()">キーを保存</button>
+      <p class="hint">Google AI Studio で無料取得できます。名刺を撮影すると各項目を自動入力します。</p>
+    </div>
+
+    <div class="sec-title">自分の名刺（QR / vCardで渡す）</div>
+    <div class="card" style="display:block;cursor:default">
+      <button class="btn block" onclick="openMyCardEdit()">自分の名刺を編集</button>
+      <div style="height:8px"></div>
+      <button class="btn ghost block" onclick="showMyQR()">QRコードを表示して渡す</button>
+    </div>
+
+    <div class="sec-title">データ管理</div>
+    <div class="card" style="display:block;cursor:default">
+      <button class="btn line block" onclick="exportCSV()">CSVで書き出し</button>
+      <div style="height:8px"></div>
+      <button class="btn line block" onclick="exportVCFAll()">全件をvCard(.vcf)で書き出し</button>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:20px">名刺ベース v1.0</p>
+  </section>
+</main>
+
+<button class="fab" id="fab" onclick="openEdit()">＋</button>
+
+<nav class="tabs">
+  <button id="tab-list" class="active" onclick="showView('list')"><span class="ic">📇</span>名刺</button>
+  <button id="tab-follow" onclick="showView('follow')"><span class="ic">✅</span>フォロー</button>
+  <button id="tab-settings" onclick="showView('settings')"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<!-- ===== 詳細モーダル ===== -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet" id="detailSheet"></div>
+</div>
+
+<!-- ===== 編集モーダル ===== -->
+<div class="overlay" id="editOverlay">
+  <div class="sheet">
+    <h2 id="editTitle">名刺を追加<button class="close" onclick="closeOverlay('editOverlay')">✕</button></h2>
+
+    <div class="photobox" id="photobox">
+      📷 名刺を撮影 / 写真を選ぶ<br>
+      <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
+      <div style="margin-top:10px">
+        <button class="btn sm" onclick="document.getElementById('photoInput').click()">写真を選ぶ</button>
+      </div>
+      <div id="photoPreview"></div>
+    </div>
+    <div class="ocr-status" id="ocrStatus"></div>
+
+    <label class="f"><span class="lb">氏名 *</span><input id="f_name" placeholder="山田 太郎"></label>
+    <div class="row2">
+      <label class="f"><span class="lb">ふりがな</span><input id="f_kana" placeholder="やまだ たろう"></label>
+      <label class="f"><span class="lb">役職</span><input id="f_title" placeholder="課長"></label>
+    </div>
+    <label class="f"><span class="lb">会社名</span><input id="f_company" placeholder="○○株式会社"></label>
+    <label class="f"><span class="lb">部署</span><input id="f_dept" placeholder="営業部"></label>
+    <div class="row2">
+      <label class="f"><span class="lb">電話</span><input id="f_phone" type="tel" placeholder="03-xxxx-xxxx"></label>
+      <label class="f"><span class="lb">携帯</span><input id="f_mobile" type="tel" placeholder="090-xxxx-xxxx"></label>
+    </div>
+    <label class="f"><span class="lb">メール</span><input id="f_email" type="email" placeholder="taro@example.com"></label>
+    <label class="f"><span class="lb">住所</span><input id="f_address" placeholder="東京都..."></label>
+    <label class="f"><span class="lb">Webサイト</span><input id="f_web" placeholder="https://..."></label>
+    <label class="f"><span class="lb">タグ（カンマ区切り）</span><input id="f_tags" placeholder="取引先, 学校関係"></label>
+
+    <div class="sec-title">出会った記録</div>
+    <div class="row2">
+      <label class="f"><span class="lb">日付</span><input id="f_metdate" type="date"></label>
+      <label class="f"><span class="lb">場所・イベント</span><input id="f_metevent" placeholder="○○展示会"></label>
+    </div>
+    <label class="f"><span class="lb">メモ・きっかけ</span><textarea id="f_memo" placeholder="共通の知人／話した内容 など"></textarea></label>
+
+    <label class="f" style="display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="f_follow" style="width:auto">
+      <span class="lb" style="margin:0">✅ あとで連絡する（フォローアップに入れる）</span>
+    </label>
+
+    <div id="shareRow" style="display:none">
+      <label class="f" style="display:flex;align-items:center;gap:8px;flex-direction:row">
+        <input type="checkbox" id="f_shared" style="width:auto">
+        <span class="lb" style="margin:0">👥 みんなに共有する</span>
+      </label>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn block" onclick="saveCard()">保存する</button>
+    <div id="editDelWrap" style="display:none;margin-top:10px">
+      <button class="btn danger block" onclick="deleteCard()">この名刺を削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QRモーダル ===== -->
+<div class="overlay" id="qrOverlay">
+  <div class="sheet">
+    <h2>QRコード<button class="close" onclick="closeOverlay('qrOverlay')">✕</button></h2>
+    <p class="hint" id="qrName"></p>
+    <div id="qrbox"></div>
+    <p class="hint" style="text-align:center">スマホのカメラで読み取ると連絡先に登録できます。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/easyqrcodejs@4.6.1/dist/easy.qrcode.min.js"></script>
+<script>
+/* ============ 状態 ============ */
+const LS = {
+  cards:'meishi_cards', mode:'meishi_mode', sbUrl:'meishi_sb_url', sbKey:'meishi_sb_key',
+  ocr:'meishi_ocr_key', mycard:'meishi_mycard', dispname:'meishi_dispname'
+};
+let cards = [];               // 現在のデータ
+let mode = localStorage.getItem(LS.mode) || 'local';
+let sb = null;                // supabase client
+let session = null;
+let scope = 'all';
+let activeTags = new Set();
+let editingId = null;
+let currentPhoto = '';        // base64 データURL
+let editingMyCard = false;
+
+/* ============ ユーティリティ ============ */
+const $ = id => document.getElementById(id);
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function initials(n){ if(!n) return '？'; const p=n.trim().split(/\s+/); return (p.length>1? p[0][0]+p[1][0] : n.slice(0,2)); }
+function uid(){ return 'c_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+/* ============ 画面切替 ============ */
+function showView(v){
+  ['list','follow','settings'].forEach(x=>{
+    $('view-'+x).style.display = x===v?'block':'none';
+    $('tab-'+x).classList.toggle('active', x===v);
+  });
+  $('fab').style.display = v==='list' ? 'block' : 'none';
+  if(v==='follow') renderFollow();
+  if(v==='settings') syncSettingsUI();
+}
+function setScope(s){ scope=s; document.querySelectorAll('#scopeSeg button').forEach(b=>b.classList.toggle('active',b.dataset.scope===s)); render(); }
+function closeOverlay(id){ $(id).classList.remove('show'); }
+
+/* ============ データ読み書き（ローカル/クラウド共通の入口）============ */
+async function loadCards(){
+  if(mode==='cloud' && sb && session){
+    const { data, error } = await sb.from('meishi_cards').select('*').order('created_at',{ascending:false});
+    if(error){ toast('読込エラー: '+error.message); cards=[]; return; }
+    cards = data.map(fromRow);
+  } else {
+    cards = JSON.parse(localStorage.getItem(LS.cards) || '[]');
+  }
+  render();
+}
+function saveLocal(){ localStorage.setItem(LS.cards, JSON.stringify(cards)); }
+
+// クラウド行 <-> アプリ形式
+function fromRow(r){
+  return { id:r.id, name:r.name, kana:r.kana, company:r.company, dept:r.dept, title:r.title,
+    phone:r.phone, mobile:r.mobile, email:r.email, address:r.address, web:r.web,
+    tags:r.tags||[], memo:r.memo, metdate:r.metdate, metevent:r.metevent,
+    follow:r.follow, followDone:r.follow_done, photo:r.photo,
+    shared:r.is_shared, ownerId:r.owner_id, ownerName:r.owner_name, createdAt:r.created_at };
+}
+function toRow(c){
+  return { name:c.name, kana:c.kana, company:c.company, dept:c.dept, title:c.title,
+    phone:c.phone, mobile:c.mobile, email:c.email, address:c.address, web:c.web,
+    tags:c.tags, memo:c.memo, metdate:c.metdate||null, metevent:c.metevent,
+    follow:c.follow, follow_done:c.followDone, photo:c.photo, is_shared:c.shared };
+}
+
+/* ============ 一覧表示 ============ */
+function allTags(){
+  const s=new Set(); cards.forEach(c=>(c.tags||[]).forEach(t=>t&&s.add(t))); return [...s].sort();
+}
+function render(){
+  // タグフィルタ
+  const tf=$('tagFilter'); const tags=allTags();
+  tf.innerHTML = tags.map(t=>`<span class="chip ${activeTags.has(t)?'on':''}" onclick="toggleTag('${esc(t)}')">${esc(t)}</span>`).join('');
+  $('scopeSeg').style.display = (mode==='cloud'&&session)?'flex':'none';
+
+  const q=$('q').value.trim().toLowerCase();
+  let arr = cards.filter(c=>{
+    if(scope==='mine' && c.shared) return false;
+    if(scope==='shared' && !c.shared) return false;
+    if(activeTags.size && !(c.tags||[]).some(t=>activeTags.has(t))) return false;
+    if(q){
+      const hay=[c.name,c.kana,c.company,c.dept,c.title,c.email,c.memo,c.metevent,(c.tags||[]).join(' ')].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  $('count').textContent = `${arr.length}件`;
+  const list=$('list');
+  if(!arr.length){
+    list.innerHTML = `<div class="empty"><div class="big">📇</div>名刺がありません<br><span style="font-size:13px">右下の ＋ から追加できます</span></div>`;
+    return;
+  }
+  list.innerHTML = arr.map(c=>{
+    const av = c.photo ? `<img src="${c.photo}">` : esc(initials(c.name));
+    const badges=[];
+    (c.tags||[]).slice(0,3).forEach(t=>badges.push(`<span class="badge tag">${esc(t)}</span>`));
+    if(c.follow && !c.followDone) badges.push(`<span class="badge follow">要フォロー</span>`);
+    if(c.shared) badges.push(`<span class="badge shared">共有</span>`);
+    const who = (mode==='cloud'&&c.shared&&c.ownerName)?`<span class="who">by ${esc(c.ownerName)}</span>`:'';
+    return `<div class="card" onclick="openDetail('${c.id}')">
+      <div class="avatar">${av}</div>
+      <div class="body">
+        <div class="nm">${esc(c.name||'（無名）')}</div>
+        <div class="co">${esc([c.company,c.title].filter(Boolean).join(' ／ '))}</div>
+        <div class="meta">${badges.join('')}</div>
+      </div>${who}
+    </div>`;
+  }).join('');
+}
+function toggleTag(t){ activeTags.has(t)?activeTags.delete(t):activeTags.add(t); render(); }
+
+/* ============ 詳細 ============ */
+function openDetail(id){
+  const c=cards.find(x=>x.id===id); if(!c) return;
+  const av = c.photo ? `<img src="${c.photo}">` : esc(initials(c.name));
+  const rows=[];
+  const R=(k,v,link)=> v?`<div class="drow"><div class="k">${k}</div><div class="v">${link?`<a href="${link}">${esc(v)}</a>`:esc(v)}</div></div>`:'';
+  rows.push(R('部署', c.dept));
+  rows.push(R('電話', c.phone, 'tel:'+(c.phone||'').replace(/[^0-9+]/g,'')));
+  rows.push(R('携帯', c.mobile, 'tel:'+(c.mobile||'').replace(/[^0-9+]/g,'')));
+  rows.push(R('メール', c.email, 'mailto:'+c.email));
+  rows.push(R('住所', c.address, 'https://maps.google.com/?q='+encodeURIComponent(c.address||'')));
+  rows.push(R('Web', c.web, (c.web||'').startsWith('http')?c.web:'https://'+c.web));
+  rows.push(R('タグ', (c.tags||[]).join('、')));
+  const met=[c.metdate,c.metevent].filter(Boolean).join('　');
+  rows.push(R('出会い', met));
+  rows.push(R('メモ', c.memo));
+  const canEdit = mode!=='cloud' || !c.shared || c.ownerId===(session&&session.user.id);
+  $('detailSheet').innerHTML = `
+    <h2>名刺の詳細<button class="close" onclick="closeOverlay('detailOverlay')">✕</button></h2>
+    <div class="detail-hd">
+      <div class="avatar">${av}</div>
+      <div>
+        <div class="kana">${esc(c.kana||'')}</div>
+        <div class="nm">${esc(c.name||'')}</div>
+        <div class="co">${esc(c.company||'')} ${esc(c.title||'')}</div>
+      </div>
+    </div>
+    <div class="actgrid">
+      ${c.phone||c.mobile?`<a href="tel:${(c.phone||c.mobile||'').replace(/[^0-9+]/g,'')}"><span class="ic">📞</span>電話</a>`:''}
+      ${c.email?`<a href="mailto:${c.email}"><span class="ic">✉️</span>メール</a>`:''}
+      <button onclick="showQRfor('${c.id}')"><span class="ic">📱</span>QR</button>
+      <button onclick="downloadVCF('${c.id}')"><span class="ic">📤</span>vCard</button>
+    </div>
+    ${rows.join('')}
+    ${c.follow?`<div class="drow"><div class="k">状態</div><div class="v">${c.followDone?'✅ フォロー済み':'⏳ 要フォロー'} ${canEdit?`<button class="btn sm ghost" style="margin-left:8px" onclick="toggleFollowDone('${c.id}')">${c.followDone?'未完了に戻す':'完了にする'}</button>`:''}</div></div>`:''}
+    <div class="divider"></div>
+    ${canEdit?`<button class="btn block" onclick="openEdit('${c.id}')">編集する</button>`:`<p class="hint">これは他の人が共有した名刺です（編集不可）。</p>`}
+  `;
+  $('detailOverlay').classList.add('show');
+}
+async function toggleFollowDone(id){
+  const c=cards.find(x=>x.id===id); if(!c) return;
+  c.followDone=!c.followDone;
+  if(mode==='cloud'&&sb&&session){ await sb.from('meishi_cards').update({follow_done:c.followDone}).eq('id',id); }
+  else saveLocal();
+  closeOverlay('detailOverlay'); render(); renderFollow();
+}
+
+/* ============ フォローアップ ============ */
+function renderFollow(){
+  const arr=cards.filter(c=>c.follow && !c.followDone);
+  const el=$('followList');
+  if(!arr.length){ el.innerHTML=`<div class="empty"><div class="big">🎉</div>フォロー待ちはありません</div>`; return; }
+  el.innerHTML=arr.map(c=>`<div class="card" onclick="openDetail('${c.id}')">
+    <div class="avatar">${c.photo?`<img src="${c.photo}">`:esc(initials(c.name))}</div>
+    <div class="body">
+      <div class="nm">${esc(c.name||'')}</div>
+      <div class="co">${esc(c.company||'')}</div>
+      ${c.memo?`<div class="meta"><span class="badge">${esc(c.memo.slice(0,30))}</span></div>`:''}
+    </div>
+    <button class="btn sm" style="align-self:center" onclick="event.stopPropagation();toggleFollowDone('${c.id}')">完了</button>
+  </div>`).join('');
+}
+
+/* ============ 追加・編集 ============ */
+function openEdit(id){
+  editingMyCard=false; editingId=id||null; currentPhoto='';
+  const c = id ? cards.find(x=>x.id===id) : null;
+  $('editTitle').firstChild.textContent = id?'名刺を編集':'名刺を追加';
+  const set=(f,v)=>$(f).value=v||'';
+  set('f_name',c&&c.name); set('f_kana',c&&c.kana); set('f_title',c&&c.title);
+  set('f_company',c&&c.company); set('f_dept',c&&c.dept); set('f_phone',c&&c.phone);
+  set('f_mobile',c&&c.mobile); set('f_email',c&&c.email); set('f_address',c&&c.address);
+  set('f_web',c&&c.web); set('f_tags',c?(c.tags||[]).join(', '):''); set('f_metdate',c&&c.metdate);
+  set('f_metevent',c&&c.metevent); set('f_memo',c&&c.memo);
+  $('f_follow').checked = c?!!c.follow:false;
+  $('f_shared').checked = c?!!c.shared:false;
+  currentPhoto = c&&c.photo || '';
+  $('photoPreview').innerHTML = currentPhoto?`<img src="${currentPhoto}">`:'';
+  $('ocrStatus').className='ocr-status';
+  $('shareRow').style.display = (mode==='cloud'&&session)?'block':'none';
+  $('editDelWrap').style.display = id?'block':'none';
+  $('photobox').style.display='block';
+  $('editOverlay').classList.add('show');
+}
+function collectForm(){
+  const tags=$('f_tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  return {
+    name:$('f_name').value.trim(), kana:$('f_kana').value.trim(), title:$('f_title').value.trim(),
+    company:$('f_company').value.trim(), dept:$('f_dept').value.trim(), phone:$('f_phone').value.trim(),
+    mobile:$('f_mobile').value.trim(), email:$('f_email').value.trim(), address:$('f_address').value.trim(),
+    web:$('f_web').value.trim(), tags, metdate:$('f_metdate').value, metevent:$('f_metevent').value.trim(),
+    memo:$('f_memo').value.trim(), follow:$('f_follow').checked, shared:$('f_shared').checked, photo:currentPhoto
+  };
+}
+async function saveCard(){
+  const d=collectForm();
+  if(!d.name){ toast('氏名を入力してください'); return; }
+  if(editingMyCard){ localStorage.setItem(LS.mycard, JSON.stringify(d)); closeOverlay('editOverlay'); toast('自分の名刺を保存しました'); return; }
+
+  if(mode==='cloud' && sb && session){
+    if(editingId){
+      const { error } = await sb.from('meishi_cards').update(toRow(d)).eq('id',editingId);
+      if(error){ toast('保存エラー: '+error.message); return; }
+    } else {
+      const row = {...toRow(d), owner_id:session.user.id, owner_name: localStorage.getItem(LS.dispname)||session.user.email };
+      const { error } = await sb.from('meishi_cards').insert(row);
+      if(error){ toast('保存エラー: '+error.message); return; }
+    }
+    await loadCards();
+  } else {
+    if(editingId){ const i=cards.findIndex(x=>x.id===editingId); cards[i]={...cards[i],...d}; }
+    else { cards.unshift({id:uid(),createdAt:new Date().toISOString(),followDone:false,...d}); }
+    saveLocal(); render();
+  }
+  closeOverlay('editOverlay'); toast('保存しました');
+}
+async function deleteCard(){
+  if(!editingId) return;
+  if(!confirm('この名刺を削除しますか？')) return;
+  if(mode==='cloud'&&sb&&session){
+    const { error }=await sb.from('meishi_cards').delete().eq('id',editingId);
+    if(error){ toast('削除エラー: '+error.message); return; }
+    await loadCards();
+  } else { cards=cards.filter(x=>x.id!==editingId); saveLocal(); render(); }
+  closeOverlay('editOverlay'); toast('削除しました');
+}
+
+/* ============ 写真よみとり（Gemini）============ */
+function onPhoto(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    currentPhoto=reader.result;
+    $('photoPreview').innerHTML=`<img src="${currentPhoto}">`;
+    const key=localStorage.getItem(LS.ocr);
+    if(!key){ toast('設定でGemini APIキーを登録するとAI自動入力できます'); return; }
+    await runOCR(currentPhoto,key);
+  };
+  reader.readAsDataURL(file);
+}
+async function runOCR(dataUrl,key){
+  const st=$('ocrStatus'); st.className='ocr-status show load'; st.textContent='🤖 名刺を読み取っています…';
+  try{
+    const b64 = dataUrl.split(',')[1];
+    const mime = dataUrl.substring(5, dataUrl.indexOf(';'));
+    const prompt = `この名刺の画像から情報を抽出し、次のキーのJSONだけを返してください（該当なしは空文字）：name(氏名),kana(ふりがな),company(会社名),dept(部署),title(役職),phone(電話),mobile(携帯),email(メール),address(住所),web(URL)。日本語はそのまま。`;
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt},{inline_data:{mime_type:mime,data:b64}}]}],
+        generationConfig:{response_mime_type:"application/json"}
+      })
+    });
+    const j=await res.json();
+    if(j.error) throw new Error(j.error.message);
+    const txt=j.candidates[0].content.parts[0].text;
+    const d=JSON.parse(txt);
+    const fill=(f,v)=>{ if(v&&!$(f).value) $(f).value=v; };
+    fill('f_name',d.name); fill('f_kana',d.kana); fill('f_company',d.company);
+    fill('f_dept',d.dept); fill('f_title',d.title); fill('f_phone',d.phone);
+    fill('f_mobile',d.mobile); fill('f_email',d.email); fill('f_address',d.address); fill('f_web',d.web);
+    st.className='ocr-status'; toast('読み取り完了！内容を確認してください');
+  }catch(err){
+    st.className='ocr-status show err'; st.textContent='読み取りに失敗しました：'+err.message;
+  }
+}
+
+/* ============ vCard / QR ============ */
+function vcard(c){
+  const tel = (t,type)=> t?`TEL;TYPE=${type}:${t}\n`:'';
+  return `BEGIN:VCARD\nVERSION:3.0\nFN:${c.name||''}\nN:${c.name||''};;;\n`+
+    (c.company||c.dept?`ORG:${c.company||''};${c.dept||''}\n`:'')+
+    (c.title?`TITLE:${c.title}\n`:'')+
+    tel(c.phone,'WORK,VOICE')+tel(c.mobile,'CELL')+
+    (c.email?`EMAIL;TYPE=WORK:${c.email}\n`:'')+
+    (c.address?`ADR;TYPE=WORK:;;${c.address};;;;\n`:'')+
+    (c.web?`URL:${c.web}\n`:'')+
+    (c.memo?`NOTE:${c.memo.replace(/\n/g,' ')}\n`:'')+
+    `END:VCARD`;
+}
+function showQRfor(id){ const c=cards.find(x=>x.id===id); if(c) showQR(c); }
+function showQR(c){
+  $('qrName').textContent = (c.name||'')+' さんの連絡先';
+  const box=$('qrbox'); box.innerHTML='';
+  try{
+    new QRCode(box,{ text:vcard(c), width:230, height:230, correctLevel:QRCode.CorrectLevel.M });
+  }catch(e){ box.innerHTML='<p class="hint">QRの生成に失敗しました</p>'; }
+  $('qrOverlay').classList.add('show');
+}
+function downloadVCF(id){ const c=cards.find(x=>x.id===id); if(c) dlVcf(c.name, vcard(c)); }
+function dlVcf(name, text){
+  const blob=new Blob([text],{type:'text/vcard'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(name||'contact')+'.vcf'; a.click();
+}
+function exportVCFAll(){
+  if(!cards.length){ toast('名刺がありません'); return; }
+  dlVcf('meishi_all', cards.map(vcard).join('\n'));
+  toast('vCardを書き出しました');
+}
+function exportCSV(){
+  if(!cards.length){ toast('名刺がありません'); return; }
+  const cols=['name','kana','company','dept','title','phone','mobile','email','address','web','tags','metdate','metevent','memo'];
+  const head=['氏名','ふりがな','会社','部署','役職','電話','携帯','メール','住所','Web','タグ','出会った日','場所','メモ'];
+  const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
+  const rows=cards.map(c=>cols.map(k=>q(k==='tags'?(c.tags||[]).join(' / '):c[k])).join(','));
+  const csv='﻿'+[head.map(q).join(','),...rows].join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='meishi.csv'; a.click(); toast('CSVを書き出しました');
+}
+
+/* ============ 自分の名刺 ============ */
+function openMyCardEdit(){
+  editingMyCard=true; editingId=null; currentPhoto='';
+  const c=JSON.parse(localStorage.getItem(LS.mycard)||'null');
+  $('editTitle').firstChild.textContent='自分の名刺';
+  const set=(f,v)=>$(f).value=v||'';
+  ['f_name','f_kana','f_title','f_company','f_dept','f_phone','f_mobile','f_email','f_address','f_web','f_tags','f_metdate','f_metevent','f_memo'].forEach(f=>set(f,''));
+  if(c){ set('f_name',c.name);set('f_kana',c.kana);set('f_title',c.title);set('f_company',c.company);set('f_dept',c.dept);
+    set('f_phone',c.phone);set('f_mobile',c.mobile);set('f_email',c.email);set('f_address',c.address);set('f_web',c.web);set('f_memo',c.memo);}
+  $('f_follow').checked=false;
+  $('photobox').style.display='none'; $('shareRow').style.display='none'; $('editDelWrap').style.display='none';
+  $('photoPreview').innerHTML=''; $('ocrStatus').className='ocr-status';
+  $('editOverlay').classList.add('show');
+}
+function showMyQR(){
+  const c=JSON.parse(localStorage.getItem(LS.mycard)||'null');
+  if(!c){ toast('先に「自分の名刺」を登録してください'); return; }
+  showQR(c);
+}
+
+/* ============ 設定 ============ */
+function syncSettingsUI(){
+  $('mode-local').classList.toggle('active',mode==='local');
+  $('mode-cloud').classList.toggle('active',mode==='cloud');
+  $('cloudSettings').style.display = mode==='cloud'?'block':'none';
+  $('modeHint').textContent = mode==='cloud'
+    ? 'Supabaseに保存し、同じアカウント同士で名刺を共有できます。'
+    : 'この端末の中だけに保存します。共有はできませんが、すぐ使えます。';
+  $('sbUrl').value=localStorage.getItem(LS.sbUrl)||'';
+  $('sbKey').value=localStorage.getItem(LS.sbKey)||'';
+  $('ocrKey').value=localStorage.getItem(LS.ocr)||'';
+  $('displayName').value=localStorage.getItem(LS.dispname)||'';
+  updateAuthUI();
+}
+function setMode(m){
+  mode=m; localStorage.setItem(LS.mode,m); syncSettingsUI(); updateModeBadge();
+  if(m==='cloud') initSupabase().then(loadCards); else loadCards();
+}
+function updateModeBadge(){
+  const b=$('modeBadge');
+  if(mode==='cloud'){ b.textContent = session?'クラウド共有':'クラウド（要ログイン）'; b.className='mode cloud'; }
+  else { b.textContent='ローカル'; b.className='mode'; }
+}
+function saveSupabase(){
+  localStorage.setItem(LS.sbUrl,$('sbUrl').value.trim());
+  localStorage.setItem(LS.sbKey,$('sbKey').value.trim());
+  toast('接続情報を保存しました'); initSupabase().then(()=>{ updateAuthUI(); loadCards(); });
+}
+function saveOcrKey(){ localStorage.setItem(LS.ocr,$('ocrKey').value.trim()); toast('APIキーを保存しました'); }
+function saveDisplayName(){ localStorage.setItem(LS.dispname,$('displayName').value.trim()); toast('共有名を保存しました'); }
+
+async function initSupabase(){
+  const url=localStorage.getItem(LS.sbUrl), key=localStorage.getItem(LS.sbKey);
+  if(!url||!key){ sb=null; session=null; updateModeBadge(); return; }
+  sb=supabase.createClient(url,key);
+  const { data }=await sb.auth.getSession();
+  session=data.session;
+  sb.auth.onAuthStateChange((_e,s)=>{ session=s; updateAuthUI(); updateModeBadge(); loadCards(); });
+  updateModeBadge();
+}
+function updateAuthUI(){
+  const authed=!!session;
+  if($('authedBox')){
+    $('authedBox').style.display=authed?'block':'none';
+    $('loginBox').style.display=authed?'none':'block';
+    if(authed) $('authEmail').textContent=session.user.email;
+  }
+}
+async function doAuth(kind){
+  if(!sb){ toast('先にSupabase接続を保存してください'); return; }
+  const email=$('authMail').value.trim(), password=$('authPass').value;
+  if(!email||!password){ toast('メールとパスワードを入力してください'); return; }
+  const fn = kind==='signup'? sb.auth.signUp : sb.auth.signInWithPassword;
+  const { error }=await fn.call(sb.auth,{email,password});
+  if(error){ toast((kind==='signup'?'登録':'ログイン')+'失敗: '+error.message); return; }
+  toast(kind==='signup'?'登録しました（確認メールが届く場合があります）':'ログインしました');
+  const { data }=await sb.auth.getSession(); session=data.session;
+  updateAuthUI(); updateModeBadge(); loadCards();
+}
+async function doLogout(){ if(sb) await sb.auth.signOut(); session=null; updateAuthUI(); updateModeBadge(); loadCards(); }
+
+/* ============ 起動 ============ */
+(async function init(){
+  updateModeBadge();
+  if(mode==='cloud'){ await initSupabase(); }
+  await loadCards();
+  syncSettingsUI();
+})();
+// オーバーレイ背景タップで閉じる
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
+</script>
+</body>
+</html>
